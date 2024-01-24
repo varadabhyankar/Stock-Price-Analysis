@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Details</title>
+    <title>Plotly Chart</title>
+    <!-- Include Plotly JS library -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/company_styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1 id="companyName"></h1>
+        <!-- Add other details here -->
+    </div>
+
+    <div class="controls">
+        <label for="graphOptions">Select Graph Type:</label>
+        <select id="graphOptions">
+            <option value="shortTerm">Short-Term Graph</option>
+            <option value="longTerm" selected>Long-Term Graph</option>
+            <option value="withIndices">Graph with Indices</option>
+        </select>
+
+        <!-- Space for plotting a graph -->
+        <div id="plotContainer"><div></div></div>
+
+        <!-- Button for getting stock predictions -->
+        <button onclick="getStockPredictions()">Get Stock Predictions</button>
+    </div>
+</body>
+<script>
+
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, '\\$&');
+    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Trigger the request for the default selection on page load
+    const company_name= getParameterByName('name')
+    document.getElementById("companyName").innerText = company_name
+    document.title = company_name
+    sendGraphTypeAndCompanyNameToBackend();
+
+    // Event listener for the dropdown change
+    document.getElementById("graphOptions").addEventListener("change", sendGraphTypeAndCompanyNameToBackend);
+});
+
+function sendGraphTypeAndCompanyNameToBackend() {
+    // Get the selected value from the dropdown
+    var selectedGraphType = document.getElementById("graphOptions").value;
+
+    // Get the company name from the URL
+    var companyName = getParameterByName('name');
+    var companySymbol = getParameterByName('symbol');
+    // Make an AJAX request to the Django backend
+    var xhr = new XMLHttpRequest();
+    // Append graph type and company name as query parameters
+    var url =  "plot_graph/" + "?name=" + encodeURIComponent(companyName) +"&symbol=" + encodeURIComponent(companySymbol)+ "&graphType=" + encodeURIComponent(selectedGraphType);
+    xhr.open("GET", url, true);
+
+    
+    // Set up the callback function for when the request is complete
+    xhr.onreadystatechange =  function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                var response = JSON.parse(xhr.responseText);
+                var iframe = document.createElement('iframe');
+                iframe.width = '100%';
+                iframe.height = '400';
+                iframe.srcdoc = response.plot_html;
+                iframe.frameBorder = '0';
+                // Append the iframe to a container element
+                document.getElementById('plotContainer').innerHTML = "";
+                document.getElementById('plotContainer').appendChild(iframe);
+
+            } else {
+                // Handle errors or other HTTP status codes
+                console.error("Error:", xhr.status, xhr.statusText);
+            }
+        }
+    };
+    xhr.send();
+    // Send the request
+    
+}
+
+</script>
+</html>
